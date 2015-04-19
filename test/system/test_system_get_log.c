@@ -27,7 +27,7 @@ static KineticLogInfo* Info;
 
 void setUp(void)
 {
-    SystemTestSetup(1, true);
+    SystemTestSetup(1);
     Info = NULL;
 }
 
