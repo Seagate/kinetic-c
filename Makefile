@@ -12,7 +12,8 @@ PUB_INC = ./include
 #-------------------------------------------------------------------------------
 
 # This may need to be set if OpenSSL is in a nonstandard place.
-OPENSSL_PATH ?=	.
+OPENSSL_INCPATH ?=        .
+OPENSSL_LIBPATH ?= .
 
 #===============================================================================
 # Shared Build Variables
@@ -27,7 +28,7 @@ WARN += -Wno-missing-field-initializers -Werror=strict-prototypes -Wshadow
 WARN += -Werror
 CDEFS += -D_POSIX_C_SOURCE=199309L -D_C99_SOURCE=1
 CFLAGS += -std=c99 -fPIC -g $(WARN) $(CDEFS) $(OPTIMIZE)
-LDFLAGS += -lm -L${OPENSSL_PATH}/lib -lcrypto -lssl -lpthread -ljson-c
+LDFLAGS += -lm -L${OPENSSL_LIBPATH} -lcrypto -lssl -lpthread
 NUM_SIMS ?= 2
 
 #===============================================================================
@@ -40,25 +41,29 @@ LIBDIR ?= /lib
 LIB_DIR = ./src/lib
 VERSION_INFO = $(LIB_DIR)/kinetic_version_info.h
 VENDOR = ./vendor
-PROTOBUFC = $(VENDOR)/protobuf-c
-SOCKET99 = $(VENDOR)/socket99
-JSONC = $(VENDOR)/json-c
+PROTOBUFC_INCPATH ?= $(VENDOR)/protobuf-c
+SOCKET99_INCPATH ?= $(VENDOR)/socket99
+JSONC_INCPATH ?= $(VENDOR)/json-c
 VERSION_FILE = ./config/VERSION
 VERSION = ${shell head -n1 $(VERSION_FILE)}
 THREADPOOL_PATH = ${LIB_DIR}/threadpool
 BUS_PATH = ${LIB_DIR}/bus
-JSONC_LIB = ${OUT_DIR}/libjson-c.a
+JSONC_LIB ?= ${OUT_DIR}/libjson-c.a
+PROTOBUFC_LIB ?= $(OUT_DIR)/protobuf-c.o
+SOCKET99_LIB ?= $(OUT_DIR)/socket99.o
+SOCKET99_LIBPATH ?= .
+PROTOBUFC_LIBPATH ?= .
+
+LDFLAGS += ${PROTOBUFC_LIB} ${SOCKET99_LIB} ${JSONC_LIB}
 
 KINETIC_LIB_NAME = $(PROJECT).$(VERSION)
 KINETIC_LIB = $(BIN_DIR)/lib$(KINETIC_LIB_NAME).a
-LIB_INCS = -I$(LIB_DIR) -I$(PUB_INC) -I$(PROTOBUFC) -I$(SOCKET99) -I$(VENDOR) \
-	-I$(JSONC) -I$(THREADPOOL_PATH) -I$(BUS_PATH) -I${OPENSSL_PATH}/include
+LIB_INCS = -I$(LIB_DIR) -I$(PUB_INC) -I$(PROTOBUFC_INCPATH) -I$(SOCKET99_INCPATH) -I$(VENDOR) \
+	-I$(JSONC_INCPATH) -I$(THREADPOOL_PATH) -I$(BUS_PATH)
 
-C_SRC=${LIB_DIR}/*.[ch] $(SOCKET99)/socket99.[ch] $(PROTOBUFC)/protobuf-c/protobuf-c.[ch]
+C_SRC=${LIB_DIR}/*.[ch] $(SOCKET99_INCPATH)/socket99.[ch] $(PROTOBUFC_INCPATH)/protobuf-c/protobuf-c.[ch]
 
 LIB_OBJS = \
-	$(OUT_DIR)/socket99.o \
-	$(OUT_DIR)/protobuf-c.o \
 	$(OUT_DIR)/kinetic_allocator.o \
 	$(OUT_DIR)/kinetic_nbo.o \
 	$(OUT_DIR)/kinetic_operation.o \
@@ -104,8 +109,10 @@ LIB_OBJS = \
 
 KINETIC_LIB_OTHER_DEPS = Makefile Rakefile $(VERSION_FILE) $(VERSION_INFO)
 
+KINETIC_SO_DEV = $(BIN_DIR)/lib$(KINETIC_LIB_NAME).so
+KINETIC_SO_RELEASE = $(PREFIX)/lib$(KINETIC_LIB_NAME).so
 
-default: makedirs $(KINETIC_LIB)
+default: makedirs $(KINETIC_LIB) $(KINETIC_SO_DEV)
 
 makedirs:
 	@echo; mkdir -p ./bin/examples &> /dev/null; mkdir -p ./bin/unit &> /dev/null; mkdir -p ./bin/systest &> /dev/null; mkdir -p ./out &> /dev/null
@@ -118,10 +125,10 @@ clean: makedirs
 	rm -f ./bin/*.*
 	rm -f $(OUT_DIR)/*.o $(OUT_DIR)/*.a *.core *.log
 	if rake --version > /dev/null 2>&1; then if bundle --version > /dev/null 2>&1; then bundle exec rake clobber; fi; fi
-	cd ${SOCKET99} && make clean
+	if [ -f ${SOCKET99_INCPATH}/Makefile ]; then cd ${SOCKET99_INCPATH} && make clean; fi;
 	cd ${LIB_DIR}/threadpool && make clean
 	cd ${LIB_DIR}/bus && make clean
-	if [ -f ${JSONC}/Makefile ]; then cd ${JSONC} && make clean; fi;
+	if [ -f ${JSONC_INCPATH}/Makefile ]; then cd ${JSONC_INCPATH} && make clean; fi;
 
 # Setup version info generation and corresponding dependencies
 $(VERSION_INFO): $(VERSION_FILE)
@@ -151,10 +158,10 @@ ${OUT_DIR}/%.o: ${LIB_DIR}/%.c Makefile ${PUB_INC}/%.h Makefile
 	${COMPILE_SOURCE}
 
 # Sources with atypical paths / dependencies
-$(OUT_DIR)/socket99.o: $(SOCKET99)/socket99.c $(SOCKET99)/socket99.h
-	$(CC) -c -o $@ $< $(CFLAGS) -Wno-shadow -I$(SOCKET99)
-$(OUT_DIR)/protobuf-c.o: $(PROTOBUFC)/protobuf-c/protobuf-c.c $(PROTOBUFC)/protobuf-c/protobuf-c.h
-	$(CC) -c -o $@ $< -std=c99 -fPIC -g -Wall -Werror -Wno-unused-parameter $(OPTIMIZE) -I$(PROTOBUFC)
+$(OUT_DIR)/socket99.o: $(SOCKET99_INCPATH)/socket99.c $(SOCKET99_INCPATH)/socket99.h
+	$(CC) -c -o $@ $< $(CFLAGS) -Wno-shadow -I$(SOCKET99_INCPATH)
+$(OUT_DIR)/protobuf-c.o: $(PROTOBUFC_INCPATH)/protobuf-c/protobuf-c.c $(PROTOBUFC_INCPATH)/protobuf-c/protobuf-c.h
+	$(CC) -c -o $@ $< -std=c99 -fPIC -g -Wall -Werror -Wno-unused-parameter $(OPTIMIZE) -I$(PROTOBUFC_INCPATH)
 ${OUT_DIR}/kinetic_types.o: ${LIB_DIR}/kinetic_types_internal.h
 ${OUT_DIR}/bus.o: ${LIB_DIR}/bus/bus_types.h
 ${OUT_DIR}/sender.o: ${LIB_DIR}/bus/sender_internal.h
@@ -199,26 +206,31 @@ json: ${JSONC_LIB}
 $(OUT_DIR)/kinetic_acl.o: ${JSONC_LIB}
 
 json_install: ${JSONC_LIB}
-	cd ${JSONC} && \
+	cd ${JSONC_INCPATH} && \
 	make install
 
 json_uninstall:
-	if [ -f ${JSONC}/Makefile ]; then cd ${JSONC} && make uninstall; fi;
+	if [ -f ${JSONC_INCPATH}/Makefile ]; then cd ${JSONC_INCPATH} && make uninstall; fi;
 
 .PHONY: json_install json_uninstall
 
-${JSONC}/Makefile:
-	cd ${JSONC} && \
-	sh autogen.sh && \
-	./configure
+${JSONC_INCPATH}/Makefile:
+	if [ -f ${JSONC_INCPATH}/autogen.sh ]; then \
+		cd ${JSONC_INCPATH} && \
+		sh autogen.sh && \
+		./configure; \
+	fi;
 
-${JSONC}/.libs/libjson-c.a: ${JSONC}/Makefile
-	cd ${JSONC} && \
-	make libjson-c.la
+${JSONC_INCPATH}/.libs/libjson-c.a: ${JSONC_INCPATH}/Makefile
+	if [ -f ${JSONC_INCPATH}/autogen.sh ]; then \
+		cd ${JSONC_INCPATH} && \
+		make libjson-c.la; \
+	fi;
 
-${JSONC_LIB}: ${JSONC}/.libs/libjson-c.a
-	cp ${JSONC}/.libs/libjson-c.a ${JSONC_LIB}
-
+${JSONC_LIB}: ${JSONC_INCPATH}/.libs/libjson-c.a
+	if [ -f ${JSONC_INCPATH}/autogen.sh ]; then \
+		cp ${JSONC_INCPATH}/.libs/libjson-c.a ${JSONC_LIB}; \
+	fi;
 
 #-------------------------------------------------------------------------------
 # Test Support
@@ -246,9 +258,10 @@ test_threadpool:
 # Internal Libraries
 #-------------------------------------------------------------------------------
 
-${OUT_DIR}/libsocket99.a: ${SOCKET99}/*.[ch]
-	cd ${SOCKET99} && make all
-	cp ${SOCKET99}/libsocket99.a $@
+${OUT_DIR}/libsocket99.a: ${SOCKET99_INCPATH}/*.[ch]
+	if [ -f ${SOCKET99_INCPATH}/Makefile ]; then \
+		cd ${SOCKET99_INCPATH} && make all; \
+	fi;
 
 ${OUT_DIR}/libthreadpool.a: ${LIB_DIR}/threadpool/*.[ch]
 	cd ${LIB_DIR}/threadpool && make all
@@ -259,16 +272,19 @@ ${OUT_DIR}/libthreadpool.a: ${LIB_DIR}/threadpool/*.[ch]
 # Static and Dynamic Library Build Support
 #-------------------------------------------------------------------------------
 
-KINETIC_SO_DEV = $(BIN_DIR)/lib$(KINETIC_LIB_NAME).so
-KINETIC_SO_RELEASE = $(PREFIX)/lib$(KINETIC_LIB_NAME).so
-
-$(KINETIC_LIB): $(KINETIC_LIB_OTHER_DEPS) $(LIB_OBJS) $(JSONC_LIB)
+$(KINETIC_LIB): $(KINETIC_LIB_OTHER_DEPS) $(LIB_OBJS) $(JSONC_LIB) ${SOCKET99_LIB} ${PROTOBUFC_LIB}
 	@echo
 	@echo --------------------------------------------------------------------------------
 	@echo Building static library: $(KINETIC_LIB)
 	@echo --------------------------------------------------------------------------------
-	ar -rcs $@ $(LIB_OBJS)
-	ar -t $@
+	if [ -f ${SOCKET99_LIBPATH}/libsocket99.a ]; then \
+                ar -x ${SOCKET99_LIB} > ${OUT_DIR}/socket99.o; \
+                ar -rcs ${KINETIC_LIB} ${OUT_DIR}/socket99.o $(LIB_OBJS); \
+                ar -t ${KINETIC_LIB}; \
+        else \
+                ar -rcs $@ ${SOCKET99_LIB} ${PROTOBUFC_LIB} $(LIB_OBJS); \
+                ar -t $@; \
+        fi;
 
 $(KINETIC_SO_DEV): $(LIB_OBJS) $(KINETIC_LIB_OTHER_DEPS) $(JSONC_LIB)
 	@echo
@@ -316,7 +332,7 @@ uninstall:
 	$(RM) -f $(PREFIX)/include/kinetic.pb-c.h
 	$(RM) -f $(PREFIX)/include/protobuf-c/protobuf-c.h
 	$(RM) -f $(PREFIX)/include/protobuf-c.h
-	if [ -f ${JSONC}/Makefile ]; then cd ${JSONC} && make uninstall; fi;
+	if [ -f ${JSONC_INCPATH}/Makefile ]; then cd ${JSONC_INCPATH} && make uninstall; fi;
 
 .PHONY: install uninstall json_install json_uninstall
 
@@ -354,7 +370,7 @@ UNITY_SRC = ./vendor/unity/src/unity.c
 
 SYSTEST_SRC = ./test/system
 SYSTEST_OUT = $(BIN_DIR)/systest
-SYSTEST_LDFLAGS += -lm $(KINETIC_LIB) -L${OUT_DIR} -L${OPENSSL_PATH}/lib -lssl -lcrypto -lpthread -ljson-c
+SYSTEST_LDFLAGS += -lm $(KINETIC_LIB) -L${OUT_DIR} -L${OPENSSL_LIBPATH} -lssl -lcrypto -lpthread ${JSONC_LIB}
 SYSTEST_WARN = -Wall -Wextra -Werror -Wstrict-prototypes -pedantic -Wno-missing-field-initializers -Werror=strict-prototypes
 SYSTEST_CFLAGS += -std=c99 -fPIC -g $(SYSTEST_WARN) $(CDEFS) $(OPTIMIZE) -DTEST
 
@@ -377,7 +393,8 @@ $(SYSTEST_OUT)/run_%: $(SYSTEST_SRC)/%.c $(SYSTEST_OUT)/%_runner.c $(KINETIC_LIB
 	@echo ================================================================================
 	@echo System test: '$<'
 	@echo --------------------------------------------------------------------------------
-	$(CC) -o $@ $< $(word 2,$^) ./test/support/system_test_fixture.c ./test/support/system_test_kv_generate.c $(UNITY_SRC) $(SYSTEST_CFLAGS) $(LIB_INCS) -I$(UNITY_INC) -I./test/support $(SYSTEST_LDFLAGS) $(KINETIC_LIB)
+	$(CC) -o $@ $< $(word 2,$^) ./test/support/system_test_fixture.c ./test/support/system_test_kv_generate.c $(UNITY_SRC) $(SYSTEST_CFLAGS) $(LIB_INCS) -I$(UNITY_INC) -I./test/support  \
+		$(SYSTEST_LDFLAGS) $(KINETIC_LIB)
 
 $(SYSTEST_OUT)/%.testpass : $(SYSTEST_OUT)/run_%
 	./scripts/runSystemTest.sh $*
@@ -395,7 +412,7 @@ UTILITY = kinetic-c-util
 UTIL_DIR = ./src/utility
 UTIL_EXEC = $(BIN_DIR)/$(UTILITY)
 UTIL_OBJ = $(OUT_DIR)/main.o
-UTIL_LDFLAGS += -lm $(KINETIC_LIB) -L${OUT_DIR} -L${OPENSSL_PATH}/lib -lssl -lcrypto -lpthread -ljson-c
+UTIL_LDFLAGS += -lm $(KINETIC_LIB) -L${OUT_DIR} -L${OPENSSL_LIBPATH} -lssl -lcrypto -lpthread  ${JSONC_LIB}
 
 $(UTIL_OBJ): $(UTIL_DIR)/main.c
 	$(CC) -c -o $@ $< $(CFLAGS) -I$(PUB_INC) -I$(UTIL_DIR)
@@ -405,7 +422,11 @@ $(UTIL_EXEC): $(UTIL_OBJ) $(KINETIC_LIB)
 	@echo --------------------------------------------------------------------------------
 	@echo Building development test utility: $(UTIL_EXEC)
 	@echo --------------------------------------------------------------------------------
-	$(CC) -o $@ $< $(CFLAGS) $(UTIL_LDFLAGS) $(KINETIC_LIB)
+	if [ -f ${PROTOBUFC_LIBPATH}/libprotobuf-c.so ]; then \
+		$(CC) -o $@ $< $(CFLAGS) $(UTIL_LDFLAGS) $(KINETIC_LIB) ${PROTOBUFC_LIB} ${SOCKET99_LIB}; \
+	else \
+		$(CC) -o $@ $< $(CFLAGS) $(UTIL_LDFLAGS) $(KINETIC_LIB); \
+	fi;
 
 utility: $(UTIL_EXEC)
 
@@ -419,8 +440,8 @@ build: $(KINETIC_LIB) $(KINETIC_SO_DEV) utility
 DISCOVERY_UTILITY = kinetic-c-discovery
 DISCOVERY_UTIL_DIR = $(UTIL_DIR)
 DISCOVERY_UTIL_EXEC = $(BIN_DIR)/$(DISCOVERY_UTILITY)
-DISCOVERY_UTIL_OBJ = $(OUT_DIR)/discovery.o $(OUT_DIR)/socket99.o
-DISCOVERY_UTIL_LDFLAGS +=  -lm -lssl $(KINETIC_LIB) -L${OUT_DIR} -lcrypto -lpthread -ljson-c
+DISCOVERY_UTIL_OBJ = $(OUT_DIR)/discovery.o ${SOCKET99_LIB}
+DISCOVERY_UTIL_LDFLAGS +=  -lm -lssl $(KINETIC_LIB) -L${OUT_DIR} -lcrypto -lpthread ${JSONC_LIB}
 
 $(OUT_DIR)/discovery.o: $(DISCOVERY_UTIL_DIR)/discovery.c
 	$(CC) -c -o $@ $< $(CFLAGS) -I$(PUB_INC) -I$(DISCOVERY_UTIL_DIR) $(LIB_INCS)

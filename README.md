@@ -45,9 +45,10 @@ Prerequisites
             
 A release of OpenSSL that provides TLS 1.1 or newer is required.
 
-If the OpenSSL installation is not found, the `OPENSSL_PATH` environment
-variable may need to be set to its base path, e.g.
-`export OPENSSL_PATH=/usr/local/openssl/1.0.1k/`.
+If the OpenSSL installation is not found, the `OPENSSL_INCPATH` and 
+`OPENSSL_LIBPATH` environment variable may need to be set to its base path, e.g.
+`export OPENSSL_INCPATH=/usr/include/openssl`
+`export OPENSSL_LIBPATH=/usr/lib64`
 
 Getting Started
 ---------------
@@ -77,6 +78,27 @@ Getting Started
     > make start_sims # starts bundled kinetic-java simulators for testing
     > make all # this is what Travis-CI build does does for regression testing
     > make stop_sims # stops all locally running simulators
+
+How to cross-compile?
+--------------------
+
+clone kinetic-c client from github (--recursive not required as for cross-compiling we will be building all submodules outside),
+
+    > git clone https://github.com/seagate/kinetic-c.git
+    > cd kinetic-c
+
+To cross-compile the package, Build json-c, protobuf-c, socket99 outside the kinetic-c-client and
+set environment variables to its base path, e.g.
+
+`export JSONC_INCPATH=/usr/include/json-c/`
+`export JSONC_LIB=/usr/lib64/libprotobuf-c.so`
+`export PROTOBUFC_INCPATH=/usr/include/protobuf-c/`
+`export PROTOBUFC_LIB=/usr/lib64/libprotobuf-c.so`
+`export SOCKET99_INCPATH=/usr/include/socket99/`
+`export SOCKET99_LIB=/usr/lib64/libsocket99.a`
+
+
+    > make # build static and shared library
 
 API Documentation
 =================
