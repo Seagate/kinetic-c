@@ -117,18 +117,19 @@ static bool create_entries(KineticSession * const session, const int count)
     static const ssize_t sz = 20;
     char key_buf[sz];
     char value_buf[sz];
+    char tag_buf[sz];
 
     for (int i = 0; i < count; i++) {
 
         ByteBuffer KeyBuffer = ByteBuffer_CreateAndAppendFormattedCString(key_buf, sz, "key_prefix_%02d", i);
         ByteBuffer ValueBuffer = ByteBuffer_CreateAndAppendFormattedCString(value_buf, sz, "val_%02d", i);
-        
+
         /* Populate tag with SHA1 of value */
         ByteBuffer put_tag_buf = ByteBuffer_Malloc(20);
         uint8_t sha1[20];
         SHA1(ValueBuffer.array.data, ValueBuffer.bytesUsed, &sha1[0]);
         ByteBuffer_Append(&put_tag_buf, sha1, sizeof(sha1));
-        
+
         KineticEntry entry = {
             .key = KeyBuffer,
             .value = ValueBuffer,

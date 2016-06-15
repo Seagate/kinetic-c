@@ -30,7 +30,7 @@
 #include <time.h>
 #include <pthread.h>
 
-#define KINETIC_MAX_OUTSTANDING_OPERATIONS_PER_SESSION (10)
+#define KINETIC_MAX_OUTSTANDING_OPERATIONS_PER_SESSION (100)
 #define KINETIC_SOCKET_DESCRIPTOR_INVALID (-1)
 #define KINETIC_CONNECTION_TIMEOUT_SECS (30) /* Java simulator may take longer than 10 seconds to respond */
 #define KINETIC_OPERATION_TIMEOUT_SECS (20)
@@ -101,6 +101,7 @@ struct _KineticSession {
     KineticResourceWaiter connectionReady;              ///< connection ready status (set to true once connectionID recieved)
     KineticCountingSemaphore * outstandingOperations;   ///< counting semaphore to only allows the configured number of outstanding operation at a given time
     uint16_t timeoutSeconds;                            ///< Default response timeout
+    uint32_t batchIdSequence;                           ///< increments for each batch operation in a session
 };
 
 // Kinetic Message HMAC
@@ -186,6 +187,7 @@ struct _KineticOperation {
     KineticOperationCallback opCallback;
     KineticCompletionClosure closure;
     ByteArray value;
+    bool no_response;
 };
 
 

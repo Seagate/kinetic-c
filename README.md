@@ -15,7 +15,7 @@ Kinetic Protocol Support
 ------------------------
 Built using:
 
-* [Kinetic Protocol v3.0.5](https://github.com/Kinetic/kinetic-protocol/tree/3.0.5)
+* [Kinetic Protocol v3.0.5](https://github.com/Kinetic/kinetic-protocol/tree/3.0.6)
 * [ProtoBuf-C v1.1.0](https://github.com/protobuf-c/protobuf-c)
 * [Google ProtoBuf v2.6.0](https://developers.google.com/protocol-buffers/docs/downloads)
 
@@ -81,10 +81,10 @@ Getting Started
 API Documentation
 =================
 
-[Kinetic-C API Documentation](http://seagate.github.io/kinetic-c/) (generated with Doxygen)
-* [Kinetic-C API](http://seagate.github.io/kinetic-c/kinetic__client_8h.html)
-* [Kinetic-C types](http://seagate.github.io/kinetic-c/kinetic__types_8h.html)
-* [ByteArray API](http://seagate.github.io/kinetic-c/byte__array_8h.html)
+[Kinetic-C API Documentation](http://kinetic.github.io/kinetic-c/) (generated with Doxygen)
+* [Kinetic-C API](http://kinetic.github.io/kinetic-c/kinetic__client_8h.html)
+* [Kinetic-C types](http://kinetic.github.io/kinetic-c/kinetic__types_8h.html)
+* [ByteArray API](http://kinetic.github.io/kinetic-c/byte__array_8h.html)
     * The ByteArray and ByteBuffer types are used for exchanging variable length byte-arrays with kinetic-c
         * e.g. object keys, object value data, etc.
 

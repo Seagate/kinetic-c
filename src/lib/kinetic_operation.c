@@ -161,7 +161,7 @@ void KineticOperation_Complete(KineticOperation* op, KineticStatus status)
     // Release this request so that others can be unblocked if at max (request PDUs throttled)
     KineticCountingSemaphore_Give(op->session->outstandingOperations);
 
-    if(op->closure.callback != NULL) {
+    if(op->closure.callback != NULL && !op->no_response) {
         op->closure.callback(&completionData, op->closure.clientData);
     }
 

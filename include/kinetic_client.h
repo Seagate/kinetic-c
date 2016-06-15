@@ -260,4 +260,86 @@ KineticStatus KineticClient_P2POperation(KineticSession* const session,
                                          KineticP2P_Operation* const p2pOp,
                                          KineticCompletionClosure* closure);
 
+/**
+ * @brief Generates a session-unique batch id for this transaction and initializes the structure
+ *
+ * @param session   The connected KineticSession to use for the operation
+ *
+ * @return          Returns a pointer to a KineticBatch_Operation. You need to pass
+ *                  this pointer to other batch interfaces to execute batch commands.
+ *                  Once you are finished with the KineticBatch_Operation, the pointer
+ *                  should be released.
+ */
+KineticBatch_Operation * KineticClient_InitBatchOperation(KineticSession* const session);
+
+/**
+ * @brief Executes a `PUT` operation to store/update an entry on the Kinetic Device.
+ * This command is not committed until the KineticClient_BatchEnd method is invoked
+ * and returned successfully.
+ *
+ * @param batchOp       The session-unique KineticBatch_Operation to use for the operation.
+ * @param entry         Key/value entry for object to store. 'value' must
+ *                      specify the data to be stored. If a closure is provided
+ *                      this pointer must remain valid until the closure callback
+ *                      is called.
+ * @param closure       Must be specified, operation will be executed in asynchronous
+ *                      mode, and closure callback will be called upon completion in
+ *                      another thread.
+ *
+ * @return              Returns the resulting KineticStatus.
+ */
+KineticStatus KineticClient_BatchPut(KineticBatch_Operation* const batchOp,
+                                     KineticEntry* const entry);
+
+/**
+ * @brief Executes a `DELETE` operation to delete an entry from the Kinetic Device.
+ * This command is not committed until the KineticClient_BatchEnd method is invoked
+ * and returned successfully.
+ *
+ * @param batchOp       The session-unique KineticBatch_Operation to use for the operation.
+ * @param entry         Key/value entry for object to delete. 'value' is
+ *                      not used for this operation.
+ * @param closure       Must specified, operation will be executed in asynchronous mode,
+ *                      and closure callback will be called upon completion in another thread.
+ *
+ * @return              Returns the resulting KineticStatus.
+ */
+KineticStatus KineticClient_BatchDelete(KineticBatch_Operation* const batchOp,
+                                        KineticEntry* const entry);
+
+/**
+ * @brief Start the batch operation.
+ *
+ * @param batchOp       The session-unique KineticBatch_Operation to use for
+ *                      the operation.
+ *
+ * @return              Returns the resulting KineticStatus.
+ */
+KineticStatus KineticClient_BatchStart(KineticBatch_Operation* const batchOp);
+
+/**
+ * @brief Commit the batch operation. When this call returned successfully,
+ * all the commands performed in this batch are executed and committed to
+ * store successfully. Otherwise, no commands in this batch were committed
+ * to the persistent store.
+ *
+ * @param batchOp       The session-unique KineticBatch_Operation to use for
+ *                      this operation.
+ *
+ * @return              Returns the resulting KineticStatus.
+ */
+KineticStatus KineticClient_BatchEnd(KineticBatch_Operation* const batchOp);
+
+/**
+ * @brief Abort the current batch operation. When this call returned successfully,
+ * all the commands queued in this batch are aborted. Resources related to this
+ * batch are cleaned up and released.
+ *
+ * @param batchOp       The session-unique KineticBatch_Operation to use for
+ *                      this operation.
+ *
+ * @return              Returns the resulting KineticStatus.
+ */
+KineticStatus KineticClient_BatchAbort(KineticBatch_Operation* const batchOp);
+
 #endif // _KINETIC_CLIENT_H
