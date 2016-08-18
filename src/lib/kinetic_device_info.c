@@ -21,7 +21,8 @@
 #include <string.h>
 
 /* Using copy_str instead of strdup since it's not necessarily available. */
-static char *copy_str(const char *s) {
+static char *copy_str(const char *s) 
+{
     if (s == NULL) { return NULL; }
 
     int len = strlen(s);
@@ -35,7 +36,8 @@ static char *copy_str(const char *s) {
 }
 
 /* Copy a byte array. Returns one with res.data == NULL on alloc fail. */
-static ByteArray copy_to_byte_array(uint8_t *data, size_t length) {
+static ByteArray copy_to_byte_array(uint8_t *data, size_t length) 
+{
     ByteArray res = { .len = length, };
     res.data = calloc(res.len, sizeof(uint8_t));
     if (res.data) {
@@ -44,8 +46,24 @@ static ByteArray copy_to_byte_array(uint8_t *data, size_t length) {
     return res;
 }
 
-static void free_byte_array(ByteArray ba) {
-    free(ba.data);
+static void free_byte_array(ByteArray ba) 
+{
+    if (ba.data) {
+        free(ba.data);
+        ba.data = NULL;
+    }
+}
+
+static void KineticLogInfo_FreeUtilizations(KineticLogInfo_Utilization* util, size_t num_util)
+{
+    if (util) {
+        for (size_t i = 0; i < num_util; i++) {
+            if (util[i].name) {
+                free(util[i].name);
+            }
+        }
+        free(util);
+    }
 }
 
 static KineticLogInfo_Utilization* KineticLogInfo_GetUtilizations(
@@ -74,6 +92,18 @@ static KineticLogInfo_Utilization* KineticLogInfo_GetUtilizations(
     return util;
 }
 
+static void KineticLogInfo_FreeTemperatures(KineticLogInfo_Temperature* temp, size_t num_temp)
+{
+    if (temp) {
+        for (size_t i = 0; i < num_temp; i++) {
+            if(temp[i].name) {
+                free(temp[i].name);
+            }
+        }
+        free(temp);
+    }
+}
+
 static KineticLogInfo_Temperature *KineticLogInfo_GetTemperatures(
     const Com__Seagate__Kinetic__Proto__Command__GetLog* getLog,
     size_t *numTemperatures)
@@ -84,6 +114,12 @@ static KineticLogInfo_Temperature *KineticLogInfo_GetTemperatures(
     if (temp) {
         for (size_t i = 0; i < num_temp; i++) {
             temp[i].name = copy_str(getLog->temperatures[i]->name);
+            if(temp[i].name == NULL) {
+                for (size_t j = 0; j < i; j++) { free(temp[j].name); }
+                free(temp);
+                temp = NULL;
+                break;
+            }
             temp[i].current = getLog->temperatures[i]->current;
             temp[i].minimum = getLog->temperatures[i]->minimum;
             temp[i].maximum = getLog->temperatures[i]->maximum;
@@ -95,6 +131,13 @@ static KineticLogInfo_Temperature *KineticLogInfo_GetTemperatures(
     return temp;
 }
 
+static void KineticLogInfo_FreeCapacity(KineticLogInfo_Capacity *cap)
+{
+    if(cap ) {
+        free(cap);
+    }
+}
+
 static KineticLogInfo_Capacity *KineticLogInfo_GetCapacity(
     const Com__Seagate__Kinetic__Proto__Command__GetLog* getLog)
 {
@@ -104,6 +147,35 @@ static KineticLogInfo_Capacity *KineticLogInfo_GetCapacity(
         cap->portionFull = getLog->capacity->portionfull;
     }
     return cap;
+}
+
+static void KineticLogInfo_FreeConfiguration(KineticLogInfo_Configuration* cfg)
+{
+    if(cfg) 
+    {
+        free_byte_array(cfg->serialNumber);
+        free_byte_array(cfg->worldWideName);
+        if (cfg->vendor) { free(cfg->vendor); }
+        if (cfg->model) { free(cfg->model); }
+        if (cfg->version) { free(cfg->version); }
+        if (cfg->compilationDate) { free(cfg->compilationDate); }
+        if (cfg->sourceHash) { free(cfg->sourceHash); }
+        if (cfg->protocolVersion) { free(cfg->protocolVersion); }
+        if (cfg->protocolCompilationDate) { free(cfg->protocolCompilationDate); }
+        if (cfg->protocolSourceHash) { free(cfg->protocolSourceHash); }
+
+        if (cfg->interfaces) {
+            for (size_t i = 0; i < cfg->numInterfaces; i++) {
+                if (cfg->interfaces[i].name) { free(cfg->interfaces[i].name); }
+                free_byte_array(cfg->interfaces[i].MAC);
+                free_byte_array(cfg->interfaces[i].ipv4Address);
+                free_byte_array(cfg->interfaces[i].ipv6Address);
+            }
+            free(cfg->interfaces);
+        }
+
+        free(cfg);
+    }
 }
 
 static KineticLogInfo_Configuration * KineticLogInfo_GetConfiguration(
@@ -184,30 +256,16 @@ static KineticLogInfo_Configuration * KineticLogInfo_GetConfiguration(
     }
     return cfg;
 cleanup:
-
-    free_byte_array(cfg->serialNumber);
-    free_byte_array(cfg->worldWideName);
-    if (cfg->vendor) { free(cfg->vendor); }
-    if (cfg->model) { free(cfg->model); }
-    if (cfg->version) { free(cfg->version); }
-    if (cfg->compilationDate) { free(cfg->compilationDate); }
-    if (cfg->sourceHash) { free(cfg->sourceHash); }
-    if (cfg->protocolVersion) { free(cfg->protocolVersion); }
-    if (cfg->protocolCompilationDate) { free(cfg->protocolCompilationDate); }
-    if (cfg->protocolSourceHash) { free(cfg->protocolSourceHash); }
-
-    if (cfg->interfaces) {
-        for (size_t i = 0; i < cfg->numInterfaces; i++) {
-            if (cfg->interfaces[i].name) { free(cfg->interfaces[i].name); }
-            free_byte_array(cfg->interfaces[i].MAC);
-            free_byte_array(cfg->interfaces[i].ipv4Address);
-            free_byte_array(cfg->interfaces[i].ipv6Address);
-        }
-        free(cfg->interfaces);
-    }
-
-    free(cfg);
+    KineticLogInfo_FreeConfiguration(cfg);
+    
     return NULL;
+}
+
+static void KineticLogInfo_FreeStatistics(KineticLogInfo_Statistics* stats)
+{
+    if(stats) {
+        free(stats);
+    }
 }
 
 static KineticLogInfo_Statistics *KineticLogInfo_GetStatistics(
@@ -239,6 +297,13 @@ static ByteArray KineticLogInfo_GetMessages(
     //COPY_BYTES_OPTIONAL(messages, info, getLog, allocator);
 }
 
+static void KineticLogInfo_FreeLimits(KineticLogInfo_Limits* limits)
+{
+    if(limits) {
+        free(limits);
+    }
+}
+
 static KineticLogInfo_Limits * KineticLogInfo_GetLimits(
     const Com__Seagate__Kinetic__Proto__Command__GetLog* getLog)
 {
@@ -257,6 +322,14 @@ static KineticLogInfo_Limits * KineticLogInfo_GetLimits(
         limits->maxPinSize = getLog->limits->maxpinsize;
     }
     return limits;
+}
+
+static void KineticLogInfo_FreeDevice(KineticLogInfo_Device* device)
+{
+    if(device) {
+        free_byte_array(device->name);
+        free(device);
+    }
 }
 
 static KineticLogInfo_Device * KineticLogInfo_GetDevice(
@@ -289,20 +362,31 @@ KineticLogInfo* KineticLogInfo_Create(const Com__Seagate__Kinetic__Proto__Comman
     KineticLogInfo_Limits* limits = NULL;
     KineticLogInfo_Device* device = NULL;
 
-    utilizations = KineticLogInfo_GetUtilizations(getLog, &info->numUtilizations);
-    if (utilizations == NULL) { goto cleanup; }
-    capacity = KineticLogInfo_GetCapacity(getLog);
-    if (capacity == NULL) { goto cleanup; }
-    temperatures = KineticLogInfo_GetTemperatures(getLog, &info->numTemperatures);
-    if (temperatures == NULL) { goto cleanup; }
+    if (getLog->utilizations) {
+        utilizations = KineticLogInfo_GetUtilizations(getLog, &info->numUtilizations);
+        if (utilizations == NULL) { goto cleanup; }
+    }
+
+    if (getLog->capacity) {
+        capacity = KineticLogInfo_GetCapacity(getLog);
+        if (capacity == NULL) { goto cleanup; }
+    }
+
+    if (getLog->temperatures) {
+        temperatures = KineticLogInfo_GetTemperatures(getLog, &info->numTemperatures);
+        if (temperatures == NULL) { goto cleanup; }
+    }
 
     if (getLog->configuration != NULL) {
         configuration = KineticLogInfo_GetConfiguration(getLog);
         if (configuration == NULL) { goto cleanup; }
     }
 
-    statistics = KineticLogInfo_GetStatistics(getLog, &info->numStatistics);
-    if (statistics == NULL) { goto cleanup; }
+    if (getLog->statistics) {
+        statistics = KineticLogInfo_GetStatistics(getLog, &info->numStatistics);
+        if (statistics == NULL) { goto cleanup; }
+    }
+
     ByteArray messages = KineticLogInfo_GetMessages(getLog);
     if (messages.data == NULL) { goto cleanup; }
 
@@ -311,8 +395,10 @@ KineticLogInfo* KineticLogInfo_Create(const Com__Seagate__Kinetic__Proto__Comman
         if (limits == NULL) { goto cleanup; }
     }
 
-    device = KineticLogInfo_GetDevice(getLog);
-    if (device == NULL) { goto cleanup; }
+    if (getLog->device) {
+        device = KineticLogInfo_GetDevice(getLog);
+        if (device == NULL) { goto cleanup; }
+    }
 
     info->utilizations = utilizations;
     info->temperatures = temperatures;
@@ -327,73 +413,27 @@ KineticLogInfo* KineticLogInfo_Create(const Com__Seagate__Kinetic__Proto__Comman
     return info;
 
 cleanup:
-    if (info) { free(info); }
-    if (utilizations) { free(utilizations); }
-    if (temperatures) { free(temperatures); }
-    if (capacity) { free(capacity); }
-    if (configuration) { free(configuration); }
-    if (statistics) { free(statistics); }
-    if (limits) { free(limits); }
-    if (device) { free(device); }
-    if (messages.data) { free(messages.data); }
+    KineticLogInfo_FreeUtilizations(utilizations, info->numUtilizations);
+    KineticLogInfo_FreeTemperatures(temperatures, info->numTemperatures);
+    KineticLogInfo_FreeCapacity(capacity);
+    KineticLogInfo_FreeConfiguration(configuration);
+    KineticLogInfo_FreeStatistics(statistics);
+    KineticLogInfo_FreeLimits(limits);
+    KineticLogInfo_FreeDevice(device);
+    free_byte_array(messages);
     return NULL;
 }
 
 void KineticLogInfo_Free(KineticLogInfo* kdi) {
     if (kdi) {
-        if (kdi->utilizations) {
-            for (size_t i = 0; i < kdi->numUtilizations; i++) {
-                free(kdi->utilizations[i].name);
-            }
-            free(kdi->utilizations);
-        }
-
-        if (kdi->temperatures) {
-            for (size_t i = 0; i < kdi->numTemperatures; i++) {
-                free(kdi->temperatures[i].name);
-            }
-            free(kdi->temperatures);
-        }
-
-        if (kdi->capacity) { free(kdi->capacity); }
-
-        if (kdi->configuration) {
-            KineticLogInfo_Configuration *cfg = kdi->configuration;
-
-            if (cfg->vendor) { free(cfg->vendor); }
-            if (cfg->model) { free(cfg->model); }
-            if (cfg->version) { free(cfg->version); }
-            if (cfg->compilationDate) { free(cfg->compilationDate); }
-            if (cfg->sourceHash) { free(cfg->sourceHash); }
-            if (cfg->protocolVersion) { free(cfg->protocolVersion); }
-            if (cfg->protocolCompilationDate) { free(cfg->protocolCompilationDate); }
-            if (cfg->protocolSourceHash) { free(cfg->protocolSourceHash); }
-
-            if (cfg->serialNumber.data) { free(cfg->serialNumber.data); }
-            if (cfg->worldWideName.data) { free(cfg->worldWideName.data); }
-
-            if (cfg->interfaces) {
-                for (size_t i = 0; i < cfg->numInterfaces; i++) {
-                    KineticLogInfo_Interface *inf = &cfg->interfaces[i];
-                    if (inf->name) { free(inf->name); }
-                    if (inf->MAC.data) { free(inf->MAC.data); }
-                    if (inf->ipv4Address.data) { free(inf->ipv4Address.data); }
-                    if (inf->ipv6Address.data) { free(inf->ipv6Address.data); }
-                }
-                free(cfg->interfaces);
-            }
-            free(cfg);
-        }
-
-        if (kdi->statistics) { free(kdi->statistics); }
-        if (kdi->limits) { free(kdi->limits); }
-
-        if (kdi->device) {
-            if (kdi->device->name.data) { free(kdi->device->name.data); }
-            free(kdi->device);
-        }
-
-        if (kdi->messages.data) { free(kdi->messages.data); }
+        KineticLogInfo_FreeUtilizations(kdi->utilizations, kdi->numUtilizations);
+        KineticLogInfo_FreeTemperatures(kdi->temperatures, kdi->numTemperatures);
+        KineticLogInfo_FreeCapacity(kdi->capacity);
+        KineticLogInfo_FreeConfiguration(kdi->configuration);
+        KineticLogInfo_FreeStatistics(kdi->statistics);
+        KineticLogInfo_FreeLimits(kdi->limits);
+        KineticLogInfo_FreeDevice(kdi->device);
+        free_byte_array(kdi->messages);
 
         free(kdi);
     }
