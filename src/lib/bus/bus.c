@@ -557,7 +557,9 @@ void Bus_BackpressureDelay(struct bus *b, size_t backpressure, uint8_t shift) {
     }
 }
 
-static void box_execute_cb(void *udata) {
+/* Function executes the callback in a separate thread
+   to not tie up kinetic listener threads */
+static void* thread_execute_cb(void *udata) {
     boxed_msg *box = (boxed_msg *)udata;
 
     void *out_udata = box->udata;
@@ -566,6 +568,27 @@ static void box_execute_cb(void *udata) {
 
     free(box);
     cb(&res, out_udata);
+    return NULL;
+}
+
+static void box_execute_cb(void *udata) {
+    pthread_t thread;
+    boxed_msg *box = (boxed_msg *)udata;
+    /* Allocate & copy boxed_msg so that box_cleanup_cb can't interfere
+       with thread execution. If box_cleanup_cb was called during
+       thread_execute_cb execution (before cb is called), would get a segfault */
+    boxed_msg *thread_box = malloc(sizeof(*thread_box));
+    memcpy(thread_box, box, sizeof(*thread_box));
+
+    if(pthread_create(&thread, NULL, thread_execute_cb, (void*)thread_box) != 0) {
+        fprintf(stderr, "pthread_create: %s", strerror(errno));
+        errno = 0;
+    }
+    if(pthread_detach(thread) != 0) {
+        fprintf(stderr, "pthread_detach: %s", strerror(errno));
+        errno = 0;
+    }
+    free(box);
 }
 
 static void box_cleanup_cb(void *udata) {
