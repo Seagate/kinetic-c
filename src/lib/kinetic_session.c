@@ -135,8 +135,8 @@ KineticStatus KineticSession_Disconnect(KineticSession * const session)
     }
 
     // Close the connection
-    KineticSocket_Close(session->socket);
     Bus_ReleaseSocket(session->messageBus, session->socket, NULL);
+
     free(session->si);
     session->si = NULL;
     session->socket = KINETIC_SOCKET_INVALID;

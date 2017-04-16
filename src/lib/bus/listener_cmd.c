@@ -115,6 +115,7 @@ static void msg_handler(listener *l, listener_msg *pmsg) {
     l->is_idle = false;
 
     listener_msg msg = *pmsg;
+
     switch (msg.type) {
 
     case MSG_ADD_SOCKET:
@@ -214,12 +215,11 @@ static void add_socket(listener *l, connection_info *ci, int notify_fd) {
 }
 
 static void remove_socket(listener *l, int fd, int notify_fd) {
+
     struct bus *b = l->bus;
     BUS_LOG_SNPRINTF(b, 2, LOG_LISTENER, b->udata, 128,
         "removing socket %d", fd);
 
-    /* Don't really close it, just drop info about it in the listener.
-     * The client thread will actually free the structure, close SSL, etc. */
     for (int id = 0; id < l->tracked_fds; id++) {
         struct pollfd removing_pfd = l->fds[id + INCOMING_MSG_PIPE];
         if (removing_pfd.fd == fd) {
@@ -247,6 +247,8 @@ static void remove_socket(listener *l, int fd, int notify_fd) {
 
             l->tracked_fds--;
             if (!is_active) { l->inactive_fds--; }
+
+            syscall_close(fd);
         }
     }
     /* CI will be freed by the client thread. */
