@@ -1,11 +1,11 @@
 [![Build Status](http://travis-ci.org/Kinetic/kinetic-c.png?branch=master)](http://travis-ci.org/Kinetic/kinetic-c)
 Kinetic C Client Library
 ========================
-The [Github kinetic-c Git repository](https://github.com/Kinetic/kinetic-c) contains code for producing Kinetic C clients for interacting with Kinetic storage object-based storage. The library uses the cross-platform Seagate Kinetic protocol for standardizing interaces between the Java simulator and Kinetic Device storage clusters.
+The [Github kinetic-c Git repository](https://github.com/Kinetic/kinetic-c) contains code for producing Kinetic C clients for interacting with Kinetic storage object-based storage. The library uses the cross-platform Seagate Kinetic protocol for standardizing interaces between the Java simulator and Kinetic Device storage clusters .
 
-Reference code is included as part of the [kinetic-c client library test utility (`kinetic-c-util`)](src/utility), which builds and links against the installed `kinetic-c-client` static library. [Additional examples](src/examples) are included for the various types of I/O operations (e.g. blocking/non-blocking, single/multi-threaded). See below for more details.
+Reference code is included as part of the [kinetic-c client library test utility (`kinetic-c-util`)](src/utility), which builds and links against the installed `kinetic-c-client` static library. [Additional examples](src/examples) are included for the various types of I/O operations (e.g. blocking/non-blocking, single/multi-threaded). See below for more details .
 
-The [project Makefile](Makefile) can be used as a reference for developing a Makefile-based project for building for a custom Kinetic Storage C client driver and/or a high-level C library.
+The [project Makefile](Makefile) can be used as a reference for developing a Makefile-based project for building for a custom Kinetic Storage C client driver and/or a high-level C library .
 
 The C library currently does not support Windows at this time because of existing library requirements. If you need Windows please post an issue.
 
@@ -23,14 +23,14 @@ Prerequisites
 -------------
 
 * [Open SSL](https://www.openssl.org/) for security and encryption
-    * Installation (if you don't already have OpenSSL installed)
+    * Installation (if you don't already have OpenSSL installed).
         * Linux (using apt-get)
             * `> sudo apt-get install openssl`
         * Linux (using yum)
             * `> sudo yum install openssl`
         * OSX (using [Homebrew](http://brew.sh/))
             * `> brew install openssl`
-* [json-c](https://github.com/json-c/json-c) for JSON-formatted ACL definition files
+* [json-c](https://github.com/json-c/json-c) for JSON-formatted ACL definition files .
     * Installation
         * via package manager
             * Linux (using apt-get)
